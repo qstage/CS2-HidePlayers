@@ -1,0 +1,6 @@
+{
+    "Plugin.Tag": "[Hide]",
+    "Plugin.Enable": "{Green}включили{Default}",
+    "Plugin.Disable": "{LightRed}выключили{Default}",
+    "Player.Hide": "{Gold}{0}{Default} Вы {1} скрытие игроков!"
+}

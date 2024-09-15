@@ -1,0 +1,6 @@
+{
+    "Plugin.Tag": "[Hide]",
+    "Plugin.Enable": "{Green}turned on{Default}",
+    "Plugin.Disable": "{LightRed}turned off{Default}",
+    "Player.Hide": "{Gold}{0}{Default} You {1} hide players!"
+}
