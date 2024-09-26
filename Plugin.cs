@@ -10,18 +10,18 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
 {
     public override string ModuleName => "HidePlayers";
     public override string ModuleAuthor => "xstage";
-    public override string ModuleVersion => "1.0.3";
+    public override string ModuleVersion => "1.0.4";
     public override string ModuleDescription => "Plugin uses code borrowed from CS2Fixes / cs2kz-metamod / hl2sdk";
 
     public PluginConfig Config { get; set; } = new();
-    private readonly bool[] _hide = new bool[65];
-    private readonly CSPlayerState[] _oldPlayerState = new CSPlayerState[65];
     private readonly INetworkServerService networkServerService = new();
 
-    private static readonly MemoryFunctionVoid<nint, nint, int, nint, int, short, int, bool> CheckTransmit = new(GameData.GetSignature("CheckTransmit"));
-    private static readonly MemoryFunctionVoid<nint, CSPlayerState> StateTransition = new(GameData.GetSignature("StateTransition"));
+    private readonly bool[] _hide = new bool[65];
+    private readonly CSPlayerState[] _oldPlayerState = new CSPlayerState[65];
 
-    #region CCheckTransmitInfo
+    private static readonly MemoryFunctionVoid<nint, nint, int> CheckTransmit = new(GameData.GetSignature("CheckTransmit"));
+    private static readonly MemoryFunctionVoid<CCSPlayerPawn, CSPlayerState> StateTransition = new(GameData.GetSignature("StateTransition"));
+
     [StructLayout(LayoutKind.Sequential)]
     public struct CCheckTransmitInfo
     {
@@ -36,7 +36,7 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
         private const int BITS_PER_INT = 32;
         private const int MAX_EDICTS = 1 << MAX_EDICT_BITS;
 
-        private uint* m_Ints;
+        private readonly uint* m_Ints;
 
         public void Clear(int bitNum)
         {
@@ -50,19 +50,20 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
         private int BitVec_Int(int bitNum) => bitNum >> LOG2_BITS_PER_INT;
         private int BitVec_Bit(int bitNum) => 1 << ((bitNum) & (BITS_PER_INT - 1));
     }
-    #endregion
 
     public override void Load(bool hotReload)
     {
         StateTransition.Hook(Hook_StateTransition, HookMode.Post);
         CheckTransmit.Hook(Hook_CheckTransmit, HookMode.Post);
 
-        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
-            if (@event.Userid is {Index: uint index})
-            {
-                _hide[index] = false;
-            }
+            var player = @event.Userid;
+
+            if (player == null) return HookResult.Continue;
+
+            _hide[player.Index] = false;
+            _oldPlayerState[player.Index] = CSPlayerState.STATE_WELCOME;
 
             return HookResult.Continue;
         });
@@ -136,11 +137,7 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
 
     private HookResult Hook_StateTransition(DynamicHook hook)
     {
-        var pawn = new CCSPlayerPawn(hook.GetParam<nint>(0));
-
-        if (!pawn.IsValid) return HookResult.Continue;
-
-        var player = pawn.OriginalController.Value;
+        var player = hook.GetParam<CCSPlayerPawn>(0).OriginalController.Value;
         var state = hook.GetParam<CSPlayerState>(1);
 
         if (player is null) return HookResult.Continue;
@@ -162,7 +159,7 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
     {
         if (config.Version < Config.Version)
         {
-            Logger.LogWarning("Update plugin config. New version: {Version}", Config.Version);
+            Logger.LogWarning("Update plugin config. New version: {v}", Config.Version);
         }
         
         Config = config;
