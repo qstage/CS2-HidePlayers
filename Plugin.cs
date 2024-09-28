@@ -19,7 +19,7 @@ public sealed class Plugin : BasePlugin, IPluginConfig<PluginConfig>
     private readonly bool[] _hide = new bool[65];
     private readonly CSPlayerState[] _oldPlayerState = new CSPlayerState[65];
 
-    private static readonly MemoryFunctionVoid<nint, nint, int> CheckTransmit = new(GameData.GetSignature("CheckTransmit"));
+    private static readonly MemoryFunctionVoid<nint, nint, int, nint, nint, nint, int, bool> CheckTransmit = new(GameData.GetSignature("CheckTransmit"));
     private static readonly MemoryFunctionVoid<CCSPlayerPawn, CSPlayerState> StateTransition = new(GameData.GetSignature("StateTransition"));
 
     [StructLayout(LayoutKind.Sequential)]
